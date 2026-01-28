@@ -55,3 +55,57 @@ sudo ip netns exec ueNameSpace2 ip addr show
 sudo ip netns exec ueNameSpace2 ping 8.8.8.8
 sudo ip netns exec ueNameSpace2 curl http://www.google.com
 ```
+### To See the Interface
+```
+sudo ip netns exec ueNameSpace2 ip addr show
+```
+###  Check Current Routing in Namespace
+```
+# Check routing table
+sudo ip netns exec ueNameSpace2 ip route show
+
+# Check default route
+sudo ip netns exec ueNameSpace2 ip route show default
+```
+### Fix Routing - Add Default Route Through oaitun_ue
+```
+# First, find the oaitun interface name and its IP
+sudo ip netns exec ueNameSpace2 ip addr show | grep oaitun -A 2
+
+# Let's say it shows: oaitun_ue1 with IP 10.0.0.8
+# Now add default route through this interface
+
+# Delete existing default route (if any)
+sudo ip netns exec ueNameSpace2 ip route del default 2>/dev/null
+
+# Add new default route through oaitun interface
+sudo ip netns exec ueNameSpace2 ip route add default dev oaitun_ue1
+
+# Or if you know the gateway IP (usually 10.0.0.1):
+sudo ip netns exec ueNameSpace2 ip route add default via 10.0.0.1 dev oaitun_ue1
+```
+### Configure DNS in Namespace
+```
+# Create directory for namespace config
+sudo mkdir -p /etc/netns/ueNameSpace2
+
+# Copy DNS config
+sudo bash -c 'cat > /etc/netns/ueNameSpace2/resolv.conf << EOF
+nameserver 8.8.8.8
+nameserver 8.8.4.4
+EOF'
+```
+### Internet Test for the UE
+```
+# Test ping
+sudo ip netns exec ueNameSpace2 ping -c 3 8.8.8.8
+
+# Test DNS resolution
+sudo ip netns exec ueNameSpace2 ping -c 3 google.com
+
+# Test curl
+sudo ip netns exec ueNameSpace2 curl -I http://www.google.com
+
+# Test speedtest (if installed)
+sudo ip netns exec ueNameSpace2 speedtest-cli
+```
